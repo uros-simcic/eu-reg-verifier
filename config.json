@@ -1,0 +1,17 @@
+{
+  "active_regulations": ["gdpr"],
+  "regulations": {
+    "gdpr": {
+      "display_name": "GDPR",
+      "full_name": "Regulation (EU) 2016/679",
+      "source_file": "corpus/gdpr/gdpr-consolidated.html"
+    }
+  },
+  "retrieval": {
+    "top_k": 4
+  },
+  "models": {
+    "embedding": "mistral-embed",
+    "generation": "mistral-small-2506"
+  }
+}

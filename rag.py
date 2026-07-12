@@ -148,13 +148,22 @@ def generate(question, hits, api_key, model):
 
 
 def extract_citations(text, hits):
-    """Pick the retrieved articles the answer actually cites (fall back to all)."""
-    cited = {int(n) for n in re.findall(r"Article\s+(\d+)", text)}
-    by_num = {h["article"]: h for h in hits}
-    chosen = [by_num[n] for n in sorted(cited) if n in by_num] or hits
+    """Pick the retrieved articles the answer actually cites.
+
+    Handles "Article 17" as well as list/range forms like "Articles 13 and 14"
+    or "Articles 15 to 22" (range endpoints only). If the answer names none of
+    the retrieved articles the list is empty -- better no citation than passing
+    off everything retrieved as one. Known imprecision: an answer quoting an
+    article's internal cross-reference ("... of Article 6(1)") counts as citing
+    it if that article was also retrieved; revisit against the Phase 5 demo set.
+    """
+    nums = set()
+    for m in re.finditer(r"Articles?\s+((?:\d+(?:\s*(?:,|and|&|to|-|–)\s*)?)+)", text):
+        nums.update(int(n) for n in re.findall(r"\d+", m.group(1)))
     return [
         {"reg": h["reg"], "article": h["article"], "title": h["title"], "text": h["text"]}
-        for h in chosen
+        for h in hits
+        if h["article"] in nums
     ]
 
 
@@ -208,6 +217,9 @@ if __name__ == "__main__":
         print("ABSTAIN:", result["text"])
     else:
         print(result["text"])
-        print("\ncitations:")
-        for c in result["citations"]:
-            print(f"  - {c['reg'].upper()}, Article {c['article']} — {c['title']}")
+        if result["citations"]:
+            print("\ncitations:")
+            for c in result["citations"]:
+                print(f"  - {c['reg'].upper()}, Article {c['article']} — {c['title']}")
+        else:
+            print("\ncitations: none stated in the answer")

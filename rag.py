@@ -96,8 +96,12 @@ def judge(question, hits, api_key, model):
     verdict = chat(
         [{"role": "system", "content": system}, {"role": "user", "content": user}],
         api_key, model,
-    )
-    return verdict.strip().upper().startswith("SUFFICIENT")
+    ).strip().upper()
+    # tolerate decoration around the keyword ("**SUFFICIENT**", "Verdict: ...");
+    # INSUFFICIENT has to be checked first since it contains SUFFICIENT
+    if "INSUFFICIENT" in verdict:
+        return False
+    return "SUFFICIENT" in verdict
 
 
 def generate(question, hits, api_key, model):

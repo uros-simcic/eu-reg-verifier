@@ -1,1 +1,5 @@
 beautifulsoup4==4.12.3
+requests==2.32.3
+python-dotenv==1.2.2
+numpy==2.4.6
+faiss-cpu==1.10.0

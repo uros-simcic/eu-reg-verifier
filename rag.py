@@ -18,6 +18,7 @@ arbitrary documents.
 import json
 import os
 import re
+import time
 from pathlib import Path
 
 import faiss
@@ -33,17 +34,39 @@ MISTRAL_CHAT_URL = "https://api.mistral.ai/v1/chat/completions"
 ABSTAIN_MESSAGE = "Not covered by the loaded regulation text (GDPR)."
 
 
+def _api_call(request_fn):
+    """Run one Mistral request; wait and retry once on 429/5xx or a network blip.
+
+    Keeps a transient hiccup (rate-limit collision, gateway error) from surfacing
+    as a traceback mid-demo. Anything else, or a second failure, still raises.
+    """
+    try:
+        return request_fn()
+    except (requests.ConnectionError, requests.Timeout):
+        time.sleep(2)
+        return request_fn()
+    except requests.HTTPError as exc:
+        resp = exc.response
+        if resp is not None and resp.status_code in (429, 500, 502, 503, 504):
+            time.sleep(min(float(resp.headers.get("Retry-After", 2)), 10))
+            return request_fn()
+        raise
+
+
 def chat(messages, api_key, model, temperature=0):
     """One mistral chat call; return the assistant text. Logs rate-limit headers."""
-    resp = requests.post(
-        MISTRAL_CHAT_URL,
-        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-        json={"model": model, "temperature": temperature, "messages": messages},
-        timeout=60,
-    )
-    log_rate_limit_headers(resp)
-    resp.raise_for_status()
-    return resp.json()["choices"][0]["message"]["content"]
+    def call():
+        resp = requests.post(
+            MISTRAL_CHAT_URL,
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            json={"model": model, "temperature": temperature, "messages": messages},
+            timeout=60,
+        )
+        log_rate_limit_headers(resp)
+        resp.raise_for_status()
+        return resp
+
+    return _api_call(call).json()["choices"][0]["message"]["content"]
 
 
 def check_cross_regulation_interplay(question, hits, active_regulations):
@@ -73,7 +96,8 @@ def delimit_articles(hits):
 
 def retrieve(question, index, meta, api_key, embed_model, k):
     """Embed the question and return the top-k article chunks with scores."""
-    vec = np.array([embed_text(question, api_key, embed_model)], dtype="float32")
+    vec = np.array([_api_call(lambda: embed_text(question, api_key, embed_model))],
+                   dtype="float32")
     faiss.normalize_L2(vec)
     scores, idxs = index.search(vec, k)
     return [dict(meta[i], score=float(s)) for i, s in zip(idxs[0], scores[0])]
@@ -170,7 +194,10 @@ if __name__ == "__main__":
     index, meta, cfg, api_key = load_resources()
     question = " ".join(sys.argv[1:]) or "Do I have the right to have my personal data erased?"
     print(f"Q: {question}\n")
-    result = answer(question, index, meta, cfg, api_key)
+    try:
+        result = answer(question, index, meta, cfg, api_key)
+    except requests.RequestException as exc:
+        raise SystemExit(f"mistral api error, try again shortly: {exc}")
 
     print("retrieved:")
     for h in result["retrieved"]:

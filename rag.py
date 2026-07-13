@@ -105,8 +105,11 @@ def retrieve(question, index, meta, api_key, embed_model, k):
     vec = np.array([_api_call(lambda: embed_text(question, api_key, embed_model))],
                    dtype="float32")
     faiss.normalize_L2(vec)
+    # clamp a bad config value and drop FAISS's -1 padding so a misconfigured
+    # top_k can never smuggle a phantom article into the loop
+    k = max(1, min(k, index.ntotal))
     scores, idxs = index.search(vec, k)
-    return [dict(meta[i], score=float(s)) for i, s in zip(idxs[0], scores[0])]
+    return [dict(meta[i], score=float(s)) for i, s in zip(idxs[0], scores[0]) if i >= 0]
 
 
 def judge(question, article_block, api_key, model):
@@ -211,6 +214,8 @@ def load_resources():
         raise SystemExit("MISTRAL_API_KEY not found in environment/.env")
     with open(ROOT / "config.json") as fh:
         cfg = json.load(fh)
+    if not cfg["active_regulations"]:
+        raise SystemExit("config.json: active_regulations is empty")
     index = faiss.read_index(str(INDEX_DIR / "regulations.faiss"))
     with open(INDEX_DIR / "metadata.json") as fh:
         meta = json.load(fh)

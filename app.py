@@ -6,7 +6,7 @@ reaches the model. That keeps each answer an auditable unit -- one question,
 one retrieval, one judged, cited (or abstained) answer.
 
 Launches with username/password auth when DEMO_USER and DEMO_PASS are set (as
-on the Hugging Face Space); without them it starts open, for local dev.
+secrets on the deployment host); without them it starts open, for local dev.
 """
 
 import os
@@ -94,7 +94,9 @@ def on_submit(question, history):
     return "", history
 
 
-THEME = "SebastianBravo/simci_css"
+# theme is vendored locally (theme.json) rather than fetched from the HF Hub at
+# startup, so a cold start never depends on the Hub being reachable
+THEME = gr.themes.ThemeClass.load(os.path.join(os.path.dirname(__file__), "theme.json"))
 CSS = """
 .gradio-container { max-width: 880px !important; margin: 0 auto !important; }
 #chatbot { height: 65vh !important; min-height: 480px; }

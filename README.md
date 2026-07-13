@@ -64,3 +64,10 @@ says, with citations — it is not legal advice.
 An online business rarely faces just one regulation. The engine is corpus-agnostic
 — the same grounded, cited, no-bluffing approach extends to ePrivacy, the DSA, NIS2
 and the AI Act by adding text and config, not by rewriting.
+
+## More
+
+- [ARCHITECTURE.md](ARCHITECTURE.md) — the full pipeline, why the judge step exists,
+  and how the corpus-agnostic design works.
+- [EVALUATION.md](EVALUATION.md) — real results from a 9-question test set, including
+  the one known limitation it surfaced.

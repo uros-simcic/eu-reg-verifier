@@ -94,10 +94,16 @@ def on_submit(question, history):
     return "", history
 
 
-THEME = gr.themes.Soft(primary_hue="indigo", neutral_hue="slate")
+THEME = "SebastianBravo/simci_css"
 CSS = """
 .gradio-container { max-width: 880px !important; margin: 0 auto !important; }
 #chatbot { height: 65vh !important; min-height: 480px; }
+/* the simci_css theme pairs a dark message background with a light-mode text
+   color in some browser color-scheme states, making answers unreadable;
+   force a light, legible color on bot messages regardless of theme state */
+#chatbot .bot, #chatbot .bot .md, #chatbot .bot .prose, #chatbot .bot * {
+    color: #e5e7eb !important;
+}
 """
 
 with gr.Blocks(title="Grounded EU-regulation Q&A", theme=THEME, css=CSS) as demo:

@@ -73,10 +73,7 @@ def format_reply(result):
     return "\n\n".join(parts)
 
 
-def respond(question):
-    q = (question or "").strip()
-    if not q:
-        return "Please type a question."
+def respond(q):
     if looks_like_followup(q):
         return FOLLOWUP_REPLY
     try:
@@ -86,10 +83,13 @@ def respond(question):
 
 
 def on_submit(question, history):
-    reply = respond(question)
+    q = (question or "").strip()
+    if not q:
+        # nothing typed; don't add an empty bubble to the thread
+        return "", history or []
     history = (history or []) + [
-        {"role": "user", "content": question},
-        {"role": "assistant", "content": reply},
+        {"role": "user", "content": q},
+        {"role": "assistant", "content": respond(q)},
     ]
     return "", history
 

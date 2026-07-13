@@ -108,6 +108,17 @@ CSS = """
 }
 """
 
+# after a reply renders, bring the newest question to the top of the chat so the
+# answer is read from its beginning (small delay lets the new message paint first)
+SCROLL_TO_QUESTION = """
+() => {
+    setTimeout(() => {
+        const qs = document.querySelectorAll('#chatbot .user');
+        if (qs.length) qs[qs.length - 1].scrollIntoView({block: 'start'});
+    }, 150);
+}
+"""
+
 with gr.Blocks(title="Grounded EU-regulation Q&A", theme=THEME, css=CSS) as demo:
     gr.Markdown(
         "# Grounded EU-regulation Q&A\n"
@@ -116,11 +127,15 @@ with gr.Blocks(title="Grounded EU-regulation Q&A", theme=THEME, css=CSS) as demo
         "It never answers from model memory.\n\n"
         f"*{DISCLAIMER}*"
     )
-    chatbot = gr.Chatbot(show_label=False, elem_id="chatbot")
+    # autoscroll off: Gradio's default jumps to the bottom of a long answer, so
+    # you land at its end and have to scroll up. Instead we scroll the newest
+    # question to the top after each reply (SCROLL_TO_QUESTION below).
+    chatbot = gr.Chatbot(show_label=False, elem_id="chatbot", autoscroll=False)
     gr.Markdown(f"**{NOTICE}**")
     question = gr.Textbox(show_label=False, submit_btn=True,
                           placeholder="e.g. Do I have the right to have my personal data erased?")
-    question.submit(on_submit, [question, chatbot], [question, chatbot])
+    question.submit(on_submit, [question, chatbot], [question, chatbot]).then(
+        None, None, None, js=SCROLL_TO_QUESTION)
 
 if __name__ == "__main__":
     user, password = os.environ.get("DEMO_USER"), os.environ.get("DEMO_PASS")

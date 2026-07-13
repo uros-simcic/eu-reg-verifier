@@ -5,8 +5,7 @@ it comes from — or a clear "the text doesn't cover that." Every answer is draw
 from the regulation itself and shows its source, so you can trust it and check it
 in seconds.
 
-**[Try the live demo →](https://eu-reg-verifier-ld0u01zf.pandastack.app)**
-(free-tier host, sleeps when idle — first load can take ~30s)
+**[Try the live demo →](https://eu-reg-verifier-ld0u01zf.pandastack.app)** *(free hosting — first load takes ~30s)*
 
 ![Screenshot of the app answering a GDPR compliance question with article citations](assets/screenshot.png)
 

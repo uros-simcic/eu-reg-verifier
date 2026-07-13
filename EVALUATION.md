@@ -4,7 +4,9 @@ This is a small, hand-curated evaluation set — 9 questions, not a statistical
 benchmark. The goal is to test the two behaviors that matter most for a
 grounded Q&A tool: does it cite correctly when the text supports an answer,
 and does it abstain when the text doesn't. Results below are the actual
-output of `demo_questions.py` against the deployed pipeline.
+output of `demo_questions.py` against the deployed pipeline — one representative
+run; the exact cited articles can vary slightly between runs, even at
+temperature 0.
 
 ## Method
 

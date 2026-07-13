@@ -25,7 +25,7 @@ DEMO_SET = [
     ("b", "Do I need opt-in consent to send a marketing newsletter?",
      "electronic marketing is ePrivacy -> known false-answer risk (answers GDPR consent angle)"),
     ("c", "Is an IP address personal data?",
-     "clearest basis is Recital 30, excluded in v1 -> answers from Art 4 and flags the gap"),
+     "clearest basis is Recital 30; recitals are not loaded -> answers from Art 4 and flags the gap"),
     ("c", "Can my employer read my work emails?",
      "no workplace-monitoring article -> may abstain"),
     ("c", "What happens if a company ignores my erasure request?",

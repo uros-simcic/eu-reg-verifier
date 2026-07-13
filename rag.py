@@ -128,8 +128,9 @@ def judge(question, article_block, api_key, model):
         api_key, model,
     ).strip().upper()
     # tolerate decoration around the keyword ("**SUFFICIENT**", "Verdict: ...");
-    # INSUFFICIENT has to be checked first since it contains SUFFICIENT
-    if "INSUFFICIENT" in verdict:
+    # negated forms must be ruled out before the positive match, since they all
+    # contain SUFFICIENT as a substring -- and a miss here means a false answer
+    if re.search(r"INSUFFICIENT|NOT\s+SUFFICIENT|N'T\s+SUFFICIENT|NO\s+SUFFICIENT", verdict):
         return False
     return "SUFFICIENT" in verdict
 

@@ -54,6 +54,11 @@ def parse_eurlex_html(reg_id: str, html_path: str) -> list[dict]:
         for m in re.finditer(r'class="title-article-norm"', raw)
     ]
     tail = raw.find("This Regulation shall be binding")
+    if tail == -1:
+        # a Directive ends with a different formula; without a tail bound the
+        # last article would swallow annexes/signatures, so make that visible
+        print(f"warning: {reg_id}: closing formula not found; "
+              f"last article may include trailing non-article text")
     bounds = starts + [tail if tail != -1 else len(raw)]
 
     chunks = []

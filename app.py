@@ -94,7 +94,13 @@ def on_submit(question, history):
     return "", history
 
 
-with gr.Blocks(title="Grounded EU-regulation Q&A") as demo:
+THEME = gr.themes.Soft(primary_hue="indigo", neutral_hue="slate")
+CSS = """
+.gradio-container { max-width: 880px !important; margin: 0 auto !important; }
+#chatbot { height: 65vh !important; min-height: 480px; }
+"""
+
+with gr.Blocks(title="Grounded EU-regulation Q&A", theme=THEME, css=CSS) as demo:
     gr.Markdown(
         "# Grounded EU-regulation Q&A\n"
         f"Answers come only from the loaded regulation text — currently **{LOADED}** — "
@@ -102,7 +108,7 @@ with gr.Blocks(title="Grounded EU-regulation Q&A") as demo:
         "It never answers from model memory.\n\n"
         f"*{DISCLAIMER}*"
     )
-    chatbot = gr.Chatbot(label="Q&A")
+    chatbot = gr.Chatbot(show_label=False, elem_id="chatbot")
     gr.Markdown(f"**{NOTICE}**")
     question = gr.Textbox(show_label=False, submit_btn=True,
                           placeholder="e.g. Do I have the right to have my personal data erased?")

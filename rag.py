@@ -18,7 +18,6 @@ arbitrary documents.
 import json
 import os
 import re
-import time
 from pathlib import Path
 
 import faiss
@@ -26,32 +25,13 @@ import numpy as np
 import requests
 from dotenv import load_dotenv
 
-from ingest import embed_text, log_rate_limit_headers
+from ingest import api_call, embed_text, log_rate_limit_headers
 
 ROOT = Path(__file__).resolve().parent
 INDEX_DIR = ROOT / "index"
 MISTRAL_CHAT_URL = "https://api.mistral.ai/v1/chat/completions"
 # formatted with the display names of whatever regulations are actually loaded
 ABSTAIN_TEMPLATE = "Not covered by the loaded regulation text ({regs})."
-
-
-def _api_call(request_fn):
-    """Run one Mistral request; wait and retry once on 429/5xx or a network blip.
-
-    Keeps a transient hiccup (rate-limit collision, gateway error) from surfacing
-    as a traceback mid-demo. Anything else, or a second failure, still raises.
-    """
-    try:
-        return request_fn()
-    except (requests.ConnectionError, requests.Timeout):
-        time.sleep(2)
-        return request_fn()
-    except requests.HTTPError as exc:
-        resp = exc.response
-        if resp is not None and resp.status_code in (429, 500, 502, 503, 504):
-            time.sleep(min(float(resp.headers.get("Retry-After", 2)), 10))
-            return request_fn()
-        raise
 
 
 def chat(messages, api_key, model, temperature=0):
@@ -67,7 +47,7 @@ def chat(messages, api_key, model, temperature=0):
         resp.raise_for_status()
         return resp
 
-    return _api_call(call).json()["choices"][0]["message"]["content"]
+    return api_call(call).json()["choices"][0]["message"]["content"]
 
 
 def check_cross_regulation_interplay(question, hits, active_regulations):
@@ -102,8 +82,7 @@ def delimit_articles(hits, reg_names):
 
 def retrieve(question, index, meta, api_key, embed_model, k):
     """Embed the question and return the top-k article chunks with scores."""
-    vec = np.array([_api_call(lambda: embed_text(question, api_key, embed_model))],
-                   dtype="float32")
+    vec = np.array([embed_text(question, api_key, embed_model)], dtype="float32")
     faiss.normalize_L2(vec)
     # clamp a bad config value and drop FAISS's -1 padding so a misconfigured
     # top_k can never smuggle a phantom article into the loop

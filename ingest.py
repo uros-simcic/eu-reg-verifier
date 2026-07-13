@@ -39,17 +39,44 @@ def log_rate_limit_headers(resp):
     print("   rate-limit headers:", hits or "none on this response")
 
 
+def api_call(request_fn):
+    """Run one Mistral request; wait and retry once on 429/5xx or a network blip.
+
+    Lives next to the HTTP calls so ingestion and query time share the same
+    protection -- a transient hiccup shouldn't kill a 99-call ingest run or
+    surface as a traceback mid-demo. Anything else, or a second failure, raises.
+    """
+    try:
+        return request_fn()
+    except (requests.ConnectionError, requests.Timeout):
+        time.sleep(2)
+        return request_fn()
+    except requests.HTTPError as exc:
+        resp = exc.response
+        if resp is not None and resp.status_code in (429, 500, 502, 503, 504):
+            try:
+                wait = float(resp.headers.get("Retry-After", 2))
+            except ValueError:
+                wait = 2.0  # Retry-After may be an HTTP-date; don't crash the retry
+            time.sleep(min(wait, 10))
+            return request_fn()
+        raise
+
+
 def embed_text(text, api_key, model):
     """Embed one string with mistral-embed; return the vector as list[float]."""
-    resp = requests.post(
-        MISTRAL_EMBED_URL,
-        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-        json={"model": model, "input": [text]},
-        timeout=60,
-    )
-    log_rate_limit_headers(resp)
-    resp.raise_for_status()
-    return resp.json()["data"][0]["embedding"]
+    def call():
+        resp = requests.post(
+            MISTRAL_EMBED_URL,
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            json={"model": model, "input": [text]},
+            timeout=60,
+        )
+        log_rate_limit_headers(resp)
+        resp.raise_for_status()
+        return resp
+
+    return api_call(call).json()["data"][0]["embedding"]
 
 
 def build():

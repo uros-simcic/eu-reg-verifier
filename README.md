@@ -44,6 +44,12 @@ python app.py                                    # index is committed; no ingest
 
 Rebuild the index from source: `python ingest.py`.
 
+Or run it containerized:
+```
+docker build -t eu-reg-verifier .
+docker run -p 7860:7860 --env-file .env eu-reg-verifier
+```
+
 ## Source & attribution
 
 Contains the text of Regulation (EU) 2016/679 (GDPR), consolidated version, from

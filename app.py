@@ -110,8 +110,10 @@ with gr.Blocks(title="Grounded EU-regulation Q&A") as demo:
 
 if __name__ == "__main__":
     user, password = os.environ.get("DEMO_USER"), os.environ.get("DEMO_PASS")
+    # bind to the port the host injects ($PORT); fall back to 7860 for local dev
+    launch = {"server_name": "0.0.0.0", "server_port": int(os.environ.get("PORT", 7860))}
     if user and password:
-        demo.launch(auth=(user, password))
+        demo.launch(auth=(user, password), **launch)
     else:
         print("warning: DEMO_USER/DEMO_PASS not set - launching without auth (local dev only)")
-        demo.launch()
+        demo.launch(**launch)

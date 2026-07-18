@@ -14,6 +14,7 @@ import os
 import gradio as gr
 import requests
 
+from guardrails import scrub_pii
 from rag import answer, load_resources
 
 index, meta, cfg, api_key = load_resources()
@@ -74,12 +75,21 @@ def format_reply(result):
 
 
 def respond(q):
+    # strip structured PII (emails, IBANs, card numbers, IPs) before anything
+    # is embedded or sent to Mistral -- see guardrails.py for what this does
+    # and does not catch
+    q, redacted = scrub_pii(q)
     if looks_like_followup(q):
         return FOLLOWUP_REPLY
     try:
-        return format_reply(answer(q, index, meta, cfg, api_key))
+        reply = format_reply(answer(q, index, meta, cfg, api_key))
     except requests.RequestException:
         return BUSY_REPLY
+    if redacted:
+        notice = (f"_Redacted before sending anything to the model: "
+                  f"{', '.join(redacted).lower()}._\n\n")
+        reply = notice + reply
+    return reply
 
 
 def on_submit(question, history):

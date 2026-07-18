@@ -88,7 +88,7 @@ if __name__ == "__main__":
     import sys
 
     reg = sys.argv[1] if len(sys.argv) > 1 else "gdpr"
-    path = sys.argv[2] if len(sys.argv) > 2 else "corpus/gdpr/gdpr-consolidated.html"
+    path = sys.argv[2] if len(sys.argv) > 2 else "regulations/gdpr/gdpr-consolidated.html"
     articles = parse_eurlex_html(reg, path)
     nums = [c["article"] for c in articles]
     ok = nums == list(range(1, nums[-1] + 1))

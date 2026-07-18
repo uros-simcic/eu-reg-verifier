@@ -4,7 +4,7 @@
     "gdpr": {
       "display_name": "GDPR",
       "full_name": "Regulation (EU) 2016/679",
-      "source_file": "corpus/gdpr/gdpr-consolidated.html"
+      "source_file": "regulations/gdpr/gdpr-consolidated.html"
     }
   },
   "retrieval": {

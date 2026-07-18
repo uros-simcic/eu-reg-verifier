@@ -1,7 +1,7 @@
 """A small demo/eval set for the grounded Q&A loop, in three buckets:
 
   (a) clearly answerable  - expect a cited answer
-  (b) outside the corpus  - the abstain gate must fire
+  (b) outside the loaded regulation - the abstain gate must fire
   (c) borderline          - tests judge precision; either outcome can be honest
 
 Run it to see current behavior:  python demo_questions.py

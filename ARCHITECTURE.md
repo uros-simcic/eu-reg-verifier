@@ -2,87 +2,57 @@
 
 ## Pipeline
 
-```
-                 ┌─────────────────────────────────────────────┐
-                 │              corpus/gdpr/*.html              │
-                 │   (EUR-Lex consolidated GDPR, committed)     │
-                 └───────────────────────┬───────────────────────┘
-                                          │ parse.py
-                                          ▼
-                          one chunk per article
-                       {reg, article, title, text}
-                                          │ ingest.py
-                                          │ mistral-embed (one call per article,
-                                          │ throttled to the account's rate limit)
-                                          ▼
-                     index/regulations.faiss + metadata.json
-                          (committed — never rebuilt at runtime)
+```mermaid
+flowchart TD
+    subgraph offline ["Ingestion (runs once, offline)"]
+        A["EUR-Lex GDPR HTML<br>regulations/gdpr/"] --> B["parse.py<br>one chunk per article"]
+        B --> C["mistral-embed<br>one call per article, throttled"]
+        C --> D[("FAISS index + metadata<br>committed to the repo")]
+    end
 
-────────────────────────────── at query time ──────────────────────────────
-
-  user question
-       │
-       ▼
-  ┌─────────────┐   mistral-embed    ┌──────────────┐
-  │  retrieve   │ ─────────────────▶ │  FAISS top-k │
-  └─────────────┘                    └──────┬───────┘
-                                             │ k retrieved articles
-                                             ▼
-                                    ┌─────────────────┐
-                                    │      judge      │  mistral-small:
-                                    │ (sufficient?)    │  "do these articles
-                                    └────────┬────────┘   answer this?"
-                                             │
-                        ┌────────────────────┴────────────────────┐
-                        │ no                                      │ yes
-                        ▼                                         ▼
-                ┌───────────────┐                        ┌─────────────────┐
-                │    abstain    │                        │     answer      │  mistral-small,
-                │ "not covered  │                        │ grounded only in │  grounded on the
-                │ by the loaded │                        │ retrieved text,  │  retrieved articles
-                │ regulation"   │                        │  with citations  │  only
-                └───────────────┘                        └─────────────────┘
+    subgraph query ["Query time"]
+        Q["User question"] --> E["mistral-embed"]
+        E --> F["FAISS top-k search"]
+        D -. "loaded at startup" .-> F
+        F --> G{"judge (mistral-small):<br>do these articles<br>answer the question?"}
+        G -- no --> H["Abstain:<br>not covered by the<br>loaded regulation text"]
+        G -- yes --> I["Answer grounded only in<br>the retrieved articles,<br>with citations"]
+    end
 ```
 
-## Why retrieve → judge → abstain → cite, not a single call
+## Why retrieve, judge, abstain, cite, not a single call
 
-A single "retrieve then generate" pass has no way to say "I don't actually
-know" — it will paraphrase whatever text got retrieved, confidently, even when
-that text doesn't answer the question. The judge step is a separate,
-dedicated decision: *do the retrieved articles actually support an answer?*
-Only a "yes" proceeds to generation. This is what makes the abstain gate real
-rather than cosmetic — it's a distinct model call with one job, not a prompt
-instruction hoping the same call also polices itself.
+Generation always produces text, whether or not the retrieved articles
+answer the question. The judge checks sufficiency first, in a separate
+model call. If the articles do not support an answer, the tool abstains
+before anything is written.
 
 ## Prompt-injection separation
 
 Retrieved article text is rendered into clearly delimited `<article>` blocks
-and only ever placed in the *user* turn, never the system role — see
+and only ever placed in the *user* turn, never the system role. See
 `delimit_articles()` in `rag.py`. The system prompt instructs the model to
 treat that content as reference data, not instructions. Risk is low for
-statute text, but the architecture is corpus-agnostic (see below), and a
-future corpus could be arbitrary documents.
+statute text, but the architecture is regulation-agnostic (see below), and a
+future regulation source could be arbitrary documents.
 
-## Corpus-agnostic by design
+## Regulation-agnostic by design
 
-Nothing in `rag.py` hard-codes "GDPR" — the active regulation list, display
-names, and full names come from `config.json`, and every chunk carries a
-`reg` id from ingestion onward. Adding a second regulation (ePrivacy, DSA,
-NIS2, the AI Act) is a data-and-config change: drop the source file in
-`corpus/<reg>/`, add an entry to `config.json`, re-run `ingest.py`. No changes
-to the retrieve/judge/generate code path.
+Nothing in `rag.py` hard-codes "GDPR". Regulation names come from
+`config.json`, and every chunk carries its regulation id. Adding another
+regulation (ePrivacy, DSA, NIS2, the AI Act) means: drop the source file in
+`regulations/<reg>/`, add a config entry, re-run `ingest.py`. The core loop
+does not change.
 
-The one deliberately inert piece is `check_cross_regulation_interplay()` in
-`rag.py` — a documented no-op stub for the case where two loaded regulations
-both plausibly answer a question (e.g. GDPR and ePrivacy on cookie consent).
-With one regulation loaded, that logic is untestable, so it stays a
-documented placeholder rather than speculative code — see the docstring for
-what it needs to do once a second corpus is active.
+`check_cross_regulation_interplay()` in `rag.py` is a deliberate no-op stub
+for when two loaded regulations both cover a question (GDPR and ePrivacy on
+cookie consent). With one regulation loaded it cannot be tested, so it stays
+a documented placeholder. See its docstring.
 
 ## Deployment
 
-Single stateless container (`Dockerfile`): the FAISS index and corpus are
-baked into the image at build time, so there's no runtime ingestion step and
-no persistent volume. The app binds to the host's injected `$PORT`. Secrets
-(`MISTRAL_API_KEY`, `DEMO_USER`, `DEMO_PASS`) are supplied as environment
-variables by the host, never committed.
+Single stateless container (`Dockerfile`): the FAISS index and regulation
+text are baked into the image at build time, so there's no runtime ingestion
+step and no persistent volume. The app binds to the host's injected `$PORT`.
+Secrets (`MISTRAL_API_KEY`, `DEMO_USER`, `DEMO_PASS`) are supplied as
+environment variables by the host, never committed.

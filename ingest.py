@@ -1,4 +1,4 @@
-"""Build the FAISS index from the committed regulation corpus.
+"""Build the FAISS index from the committed regulation text.
 
 Reads config.json, parses each active regulation into per-article chunks
 (parse.py), embeds each article with Mistral's `mistral-embed` over plain HTTPS,

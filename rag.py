@@ -10,9 +10,9 @@ abstention out. Hand-built so the whole decision stays auditable:
 
 Retrieved regulation text is treated as untrusted reference data: it is clearly
 delimited and only ever placed in the user turn, never the system role, so
-instructions hidden inside a corpus cannot steer the model. Low risk for statute
-text, but the architecture is corpus-agnostic and a future corpus may be
-arbitrary documents.
+instructions hidden inside a regulation source cannot steer the model. Low risk
+for statute text, but the architecture is regulation-agnostic and a future
+regulation source may be arbitrary documents.
 """
 
 import json
@@ -51,19 +51,19 @@ def chat(messages, api_key, model, temperature=0):
 
 
 def check_cross_regulation_interplay(question, hits, active_regulations):
-    """v2 placeholder for lex-specialis interplay across regulations.
+    """Placeholder for lex-specialis interplay across regulations.
 
     With several regulations loaded, naive retrieval can return a technically
     cited but legally incomplete answer -- e.g. citing GDPR on cookie consent
-    where the ePrivacy Directive actually governs. In v2 this must detect such
-    overlaps and either make the abstain gate fire or force citing both
-    provisions.
+    where the ePrivacy Directive actually governs. Once more than one
+    regulation is active, this must detect such overlaps and either make the
+    abstain gate fire or force citing both provisions.
 
-    In v1 only one regulation is loaded, so interplay is meaningless and
-    untestable. This is deliberately inert: a pass-through returning the hits
-    unchanged. It exists to document a known v2 risk, not as active logic.
+    With a single regulation loaded, interplay is meaningless and untestable.
+    This is deliberately inert: a pass-through returning the hits unchanged.
+    It exists to document a known risk, not as active logic.
 
-    Adjacent v2 gap, same territory: extract_citations currently keys articles
+    Related gap, same territory: extract_citations currently keys articles
     by number alone, which collides once two regulations are loaded (each has
     an "Article 5") -- fix alongside this stub's activation.
     """

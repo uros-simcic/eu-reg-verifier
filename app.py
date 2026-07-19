@@ -56,9 +56,15 @@ def source_block(reg_name, article, title, text):
 
 def format_reply(result):
     if result["abstained"]:
-        return (f"**{result['text']}**\n\n"
+        parts = [f"**{result['text']}**\n\n"
                 "The retrieved articles do not contain enough to answer this, "
-                "so no answer is given rather than a guess.")
+                "so no answer is given rather than a guess."]
+        if result["retrieved"]:
+            parts.append("_Nearest articles found, for reference:_")
+            parts += [source_block(REG_NAME.get(h["reg"], h["reg"]), h["article"],
+                                   h["title"], h["text"])
+                      for h in result["retrieved"]]
+        return "\n\n".join(parts)
     parts = [result["text"]]
     if result["citations"]:
         parts.append("**Cited articles** (click to read the source text):")

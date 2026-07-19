@@ -24,13 +24,20 @@ DEMO_SET = [
      "cookie specifics are ePrivacy, not GDPR -> should abstain"),
     ("b", "Do I need opt-in consent to send a marketing newsletter?",
      "electronic marketing is ePrivacy -> known false-answer risk (answers GDPR consent angle)"),
-    ("c", "Is an IP address personal data?",
-     "clearest basis is Recital 30; recitals are not loaded -> answers from Art 4 and flags the gap"),
+    ("c", "Do I need to appoint a Data Protection Officer for my business?",
+     "conditional -> Art 37 sets out when a DPO is required"),
     ("c", "Can my employer read my work emails?",
      "no workplace-monitoring article -> may abstain"),
-    ("c", "What happens if a company ignores my erasure request?",
-     "remedies span Art 79/82/83 across chunks"),
+    ("c", "Can a company charge me a fee to access my personal data?",
+     "conditional -> Art 15(3): free for the first copy, a fee may apply beyond that"),
 ]
+
+# Two known-borderline questions not in the demo set above, kept here for the
+# record: at the model level they land close to 50/50 sufficient/insufficient
+# on repeated single judge calls, because the deciding text is in a recital
+# ("Is an IP address personal data?" -> Recital 30) or requires synthesising
+# articles retrieval does not reliably surface together ("What happens if a
+# company ignores my erasure request?" -> Art 77/79/82/83). See EVALUATION.md.
 
 
 def main():

@@ -23,9 +23,10 @@ flowchart TD
 ## Why retrieve, judge, abstain, cite, not a single call
 
 Generation always produces text, whether or not the retrieved articles
-answer the question. The judge checks sufficiency first, in a separate
-model call. If the articles do not support an answer, the tool abstains
-before anything is written.
+answer the question. The judge checks sufficiency first, as a majority
+vote over three separate model calls (see `EVALUATION.md` for why). If the
+articles do not support an answer, the tool abstains before anything is
+written.
 
 ## Prompt-injection separation
 

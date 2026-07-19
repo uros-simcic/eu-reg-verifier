@@ -26,7 +26,7 @@ import numpy as np
 import requests
 from dotenv import load_dotenv
 
-from ingest import api_call, embed_text, log_rate_limit_headers
+from ingest import REQUEST_TIMEOUT, api_call, embed_text, log_rate_limit_headers
 
 ROOT = Path(__file__).resolve().parent
 INDEX_DIR = ROOT / "index"
@@ -46,7 +46,7 @@ def chat(messages, api_key, model, temperature=0, response_format=None):
             MISTRAL_CHAT_URL,
             headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
             json=payload,
-            timeout=60,
+            timeout=REQUEST_TIMEOUT,
         )
         log_rate_limit_headers(resp)
         resp.raise_for_status()

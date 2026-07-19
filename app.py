@@ -99,15 +99,22 @@ def respond(q):
 
 
 def on_submit(question, history):
+    # generator: first yield paints the question and a placeholder right away,
+    # so the user sees the app working instead of a frozen textbox while the
+    # model calls run; the second yield swaps in the real reply
+    history = history or []
     q = (question or "").strip()
     if not q:
         # nothing typed; don't add an empty bubble to the thread
-        return "", history or []
-    history = (history or []) + [
+        yield "", history
+        return
+    history = history + [
         {"role": "user", "content": q},
-        {"role": "assistant", "content": respond(q)},
+        {"role": "assistant", "content": "_Checking the regulation text..._"},
     ]
-    return "", history
+    yield "", history
+    history = history[:-1] + [{"role": "assistant", "content": respond(q)}]
+    yield "", history
 
 
 # theme is vendored locally (theme.json) rather than fetched from the HF Hub at
@@ -150,10 +157,19 @@ with gr.Blocks(title="Grounded EU-regulation Q&A", theme=THEME, css=CSS) as demo
     gr.Markdown(f"**{NOTICE}**")
     question = gr.Textbox(show_label=False, submit_btn=True,
                           placeholder="e.g. Do I have the right to have my personal data erased?")
-    question.submit(on_submit, [question, chatbot], [question, chatbot]).then(
+    # concurrency_limit: without it one slow question blocks everyone else's
+    # submit in the queue (default is one event at a time)
+    question.submit(on_submit, [question, chatbot], [question, chatbot],
+                    concurrency_limit=4).then(
         None, None, None, js=SCROLL_TO_QUESTION)
 
 if __name__ == "__main__":
+    # surfaced in the host's runtime logs: an injected proxy here would explain
+    # slow or hanging outbound calls to the Mistral API
+    for var in ("HTTP_PROXY", "HTTPS_PROXY", "http_proxy", "https_proxy"):
+        if os.environ.get(var):
+            print(f"note: outbound proxy configured by host: {var}={os.environ[var]}")
+
     user, password = os.environ.get("DEMO_USER"), os.environ.get("DEMO_PASS")
     # bind to the port the host injects ($PORT); fall back to 7860 for local dev
     launch = {"server_name": "0.0.0.0", "server_port": int(os.environ.get("PORT", 7860))}

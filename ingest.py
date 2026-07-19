@@ -39,16 +39,23 @@ def log_rate_limit_headers(resp):
     print("   rate-limit headers:", hits or "none on this response")
 
 
+# connect fast or fail fast; a slow read is capped so one hung call can never
+# pin the app for minutes (that turns into a polite "try again" upstream)
+REQUEST_TIMEOUT = (10, 20)
+
+
 def api_call(request_fn):
-    """Run one Mistral request; wait and retry once on 429/5xx or a network blip.
+    """Run one Mistral request; retry once on 429/5xx or a failed connection.
 
     Lives next to the HTTP calls so ingestion and query time share the same
     protection -- a transient hiccup shouldn't kill a 99-call ingest run or
-    surface as a traceback mid-demo. Anything else, or a second failure, raises.
+    surface as a traceback mid-demo. A read timeout is deliberately NOT
+    retried: if the network path is that slow, retrying doubles the user's
+    wait for the same outcome. Anything else, or a second failure, raises.
     """
     try:
         return request_fn()
-    except (requests.ConnectionError, requests.Timeout):
+    except requests.ConnectionError:
         time.sleep(2)
         return request_fn()
     except requests.HTTPError as exc:
@@ -70,7 +77,7 @@ def embed_text(text, api_key, model):
             MISTRAL_EMBED_URL,
             headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
             json={"model": model, "input": [text]},
-            timeout=60,
+            timeout=REQUEST_TIMEOUT,
         )
         log_rate_limit_headers(resp)
         resp.raise_for_status()

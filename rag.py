@@ -18,6 +18,7 @@ regulation source may be arbitrary documents.
 import json
 import os
 import re
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import faiss
@@ -110,12 +111,15 @@ def judge(question, article_block, api_key, model):
     open points; articles that only touch related ground, when the actual
     requirement asked about sits in a different law, do not.
 
-    The verdict is the majority of three calls. Mistral's API is not fully
-    deterministic even at temperature 0, and repeated runs showed borderline
-    questions flipping between answer and abstain on a single call; voting
-    makes every question with a stable tendency give the same outcome run
-    after run. (A genuinely 50/50 question can still go either way -- that is
-    the model's honest uncertainty, not noise voting could remove.)
+    The verdict is the majority of three calls, made concurrently. Mistral's
+    API is not fully deterministic even at temperature 0, and repeated runs
+    showed borderline questions flipping between answer and abstain on a
+    single call; voting makes every question with a stable tendency give the
+    same outcome run after run. (A genuinely 50/50 question can still go
+    either way -- that is the model's honest uncertainty, not noise voting
+    could remove.) The three calls are independent, so they run in parallel
+    rather than one after another -- this step's latency is one call's, not
+    three's.
     """
     system = (
         "You decide only whether the provided regulation articles contain enough "
@@ -137,19 +141,21 @@ def judge(question, article_block, api_key, model):
         f"Retrieved articles:\n{article_block}\n\n"
         "Do these articles contain enough to answer the question?"
     )
-    votes = 0
-    for _ in range(3):
+    def one_call():
         reply = chat(
             [{"role": "system", "content": system}, {"role": "user", "content": user}],
             api_key, model,
             response_format={"type": "json_object"},
         )
         try:
-            votes += bool(json.loads(reply)["sufficient"])
+            return bool(json.loads(reply)["sufficient"])
         except (json.JSONDecodeError, KeyError, TypeError):
             # malformed reply counts as insufficient: abstaining is the safe
             # direction for this tool
-            pass
+            return False
+
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        votes = sum(pool.map(lambda _: one_call(), range(3)))
     return votes >= 2
 
 

@@ -99,10 +99,6 @@ def respond(q):
 
 
 def on_submit(question, history):
-    # plain request/response on purpose: streaming (generator) answers travel
-    # over a long-lived event stream, which the current host's proxy buffers
-    # until the browser sees nothing at all. A single return rides an ordinary
-    # HTTP response, which survives any proxy.
     history = history or []
     q = (question or "").strip()
     if not q:
@@ -155,12 +151,8 @@ with gr.Blocks(title="Grounded EU-regulation Q&A", theme=THEME, css=CSS) as demo
     gr.Markdown(f"**{NOTICE}**")
     question = gr.Textbox(show_label=False, submit_btn=True,
                           placeholder="e.g. Do I have the right to have my personal data erased?")
-    # queue=False: run this event as a plain HTTP round trip instead of the
-    # SSE queue -- the current host's proxy buffers server-sent events, which
-    # left the UI frozen forever while the backend worked fine
-    question.submit(on_submit, [question, chatbot], [question, chatbot],
-                    queue=False).then(
-        None, None, None, js=SCROLL_TO_QUESTION, queue=False)
+    question.submit(on_submit, [question, chatbot], [question, chatbot]).then(
+        None, None, None, js=SCROLL_TO_QUESTION)
 
 if __name__ == "__main__":
     # surfaced in the host's runtime logs: an injected proxy here would explain

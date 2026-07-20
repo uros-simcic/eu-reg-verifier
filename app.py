@@ -99,22 +99,20 @@ def respond(q):
 
 
 def on_submit(question, history):
-    # generator: first yield paints the question and a placeholder right away,
-    # so the user sees the app working instead of a frozen textbox while the
-    # model calls run; the second yield swaps in the real reply
+    # plain request/response on purpose: streaming (generator) answers travel
+    # over a long-lived event stream, which the current host's proxy buffers
+    # until the browser sees nothing at all. A single return rides an ordinary
+    # HTTP response, which survives any proxy.
     history = history or []
     q = (question or "").strip()
     if not q:
         # nothing typed; don't add an empty bubble to the thread
-        yield "", history
-        return
+        return "", history
     history = history + [
         {"role": "user", "content": q},
-        {"role": "assistant", "content": "_Checking the regulation text..._"},
+        {"role": "assistant", "content": respond(q)},
     ]
-    yield "", history
-    history = history[:-1] + [{"role": "assistant", "content": respond(q)}]
-    yield "", history
+    return "", history
 
 
 # theme is vendored locally (theme.json) rather than fetched from the HF Hub at
@@ -157,11 +155,12 @@ with gr.Blocks(title="Grounded EU-regulation Q&A", theme=THEME, css=CSS) as demo
     gr.Markdown(f"**{NOTICE}**")
     question = gr.Textbox(show_label=False, submit_btn=True,
                           placeholder="e.g. Do I have the right to have my personal data erased?")
-    # concurrency_limit: without it one slow question blocks everyone else's
-    # submit in the queue (default is one event at a time)
+    # queue=False: run this event as a plain HTTP round trip instead of the
+    # SSE queue -- the current host's proxy buffers server-sent events, which
+    # left the UI frozen forever while the backend worked fine
     question.submit(on_submit, [question, chatbot], [question, chatbot],
-                    concurrency_limit=4).then(
-        None, None, None, js=SCROLL_TO_QUESTION)
+                    queue=False).then(
+        None, None, None, js=SCROLL_TO_QUESTION, queue=False)
 
 if __name__ == "__main__":
     # surfaced in the host's runtime logs: an injected proxy here would explain

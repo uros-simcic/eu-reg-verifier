@@ -5,7 +5,7 @@ article it comes from, or a clear "the text doesn't cover that." Every answer
 is drawn from the regulation itself and shows its source, so you can trust it
 and check it in seconds.
 
-**[Live demo](https://eu-reg-verifier-863444617243.us-central1.run.app)** *(free hosting, password protected)*
+**[Live demo](https://eu-reg-verifier-863444617243.us-central1.run.app)** *(Cloud Run hosting, password protected)*
 
 ![Screenshot of the app answering a GDPR compliance question with article citations](assets/screenshot.png)
 

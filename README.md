@@ -15,6 +15,7 @@ and check it in seconds.
 - **It won't bluff.** When the regulation doesn't address your question, it says so instead of inventing an answer.
 - **Straight from the source.** Responses come only from the regulation text, not from a model's training data.
 - **Transparent by design.** The retrieve → judge → cite pipeline is hand-built and easy to follow end to end.
+- **Your data stays out of it.** Emails, IBANs, card numbers and IP addresses are stripped from your question before anything is sent to the model.
 
 ## How it works
 
@@ -25,6 +26,9 @@ and check it in seconds.
   with `mistral-small` whether they actually answer it, then either answers
   grounded in those articles with citations, or abstains. Retrieved text is
   handled as reference data, never as instructions.
+- `guardrails.py` redacts structured personal data from the question before it
+  is embedded or sent anywhere. It catches patterns, not names — see the file
+  for what it does and doesn't cover.
 - `app.py` is a Gradio chat UI; each question is answered on its own, so every
   answer stands alone and can be checked.
 
@@ -69,8 +73,9 @@ regulation text says, with citations. It is not legal advice.
 - It answers from the GDPR. Topics an online business often bundles with it,
   such as cookie banners and marketing consent, are governed by neighbouring
   regulations like ePrivacy, so treat cross-regulation questions with care.
-- It reads the articles of the regulation; points developed mainly in the
-  recitals are flagged rather than assumed.
+- It reads the articles of the regulation, not the recitals. Where a point is
+  settled mainly in a recital, it will usually abstain rather than stretch the
+  articles to cover it.
 - Grounding in the source text sharply cuts made-up answers, though no
   retrieval system removes them entirely.
 

@@ -10,6 +10,7 @@ secrets on the deployment host); without them it starts open, for local dev.
 """
 
 import os
+import traceback
 
 import gradio as gr
 import requests
@@ -37,6 +38,8 @@ FOLLOWUP_REPLY = (
 )
 BUSY_REPLY = ("The model API didn't respond (rate limit or a transient error). "
               "Please try again in a few seconds.")
+ERROR_REPLY = ("Something went wrong while answering that. The details are in "
+               "the server log. Please try again.")
 
 # Openers that only make sense with earlier context. Deliberately conservative:
 # a wrong "please rephrase" is annoying, but a guessed answer is off-brand.
@@ -85,17 +88,24 @@ def respond(q):
     # is embedded or sent to Mistral -- see guardrails.py for what this does
     # and does not catch
     q, redacted = scrub_pii(q)
-    if looks_like_followup(q):
-        return FOLLOWUP_REPLY
-    try:
-        reply = format_reply(answer(q, index, meta, cfg, api_key))
-    except requests.RequestException:
-        return BUSY_REPLY
+    # the notice is prepended on every path: a user whose data was stripped
+    # should be told so even when the reply is a refusal or an error
+    notice = ""
     if redacted:
         notice = (f"_Redacted before sending anything to the model: "
                   f"{', '.join(redacted).lower()}._\n\n")
-        reply = notice + reply
-    return reply
+    if looks_like_followup(q):
+        return notice + FOLLOWUP_REPLY
+    try:
+        reply = format_reply(answer(q, index, meta, cfg, api_key))
+    except requests.RequestException:
+        return notice + BUSY_REPLY
+    except Exception:
+        # anything unexpected still owes the user a sentence, not a bare
+        # "Error" toast; the traceback goes to the host log for diagnosis
+        traceback.print_exc()
+        return notice + ERROR_REPLY
+    return notice + reply
 
 
 def on_submit(question, history):
@@ -104,9 +114,16 @@ def on_submit(question, history):
     if not q:
         # nothing typed; don't add an empty bubble to the thread
         return "", history
+    try:
+        reply = respond(q)
+    except Exception:
+        # last line of defence at the event boundary: the chat should always
+        # answer with words, never with a bare error toast
+        traceback.print_exc()
+        reply = ERROR_REPLY
     history = history + [
         {"role": "user", "content": q},
-        {"role": "assistant", "content": respond(q)},
+        {"role": "assistant", "content": reply},
     ]
     return "", history
 

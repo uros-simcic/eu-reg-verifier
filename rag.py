@@ -119,7 +119,8 @@ def judge(question, article_block, api_key, model):
     either way -- that is the model's honest uncertainty, not noise voting
     could remove.) The three calls are independent, so they run in parallel
     rather than one after another -- this step's latency is one call's, not
-    three's.
+    three's. A call that fails outright casts no vote; the majority is taken
+    over the calls that landed, and fewer than two raises instead of guessing.
     """
     system = (
         "You decide only whether the provided regulation articles contain enough "
@@ -142,21 +143,32 @@ def judge(question, article_block, api_key, model):
         "Do these articles contain enough to answer the question?"
     )
     def one_call():
-        reply = chat(
-            [{"role": "system", "content": system}, {"role": "user", "content": user}],
-            api_key, model,
-            response_format={"type": "json_object"},
-        )
+        """Cast one vote. None means the call failed and cast no vote."""
+        try:
+            reply = chat(
+                [{"role": "system", "content": system}, {"role": "user", "content": user}],
+                api_key, model,
+                response_format={"type": "json_object"},
+            )
+        except requests.RequestException:
+            # a call that never landed is not a vote. Counting it as
+            # insufficient would quietly turn an answerable question into an
+            # abstain, which is the one failure this tool must not hide.
+            return None
         try:
             return bool(json.loads(reply)["sufficient"])
         except (json.JSONDecodeError, KeyError, TypeError):
-            # malformed reply counts as insufficient: abstaining is the safe
-            # direction for this tool
+            # a malformed reply IS a vote, and it counts as insufficient:
+            # abstaining is the safe direction for this tool
             return False
 
     with ThreadPoolExecutor(max_workers=3) as pool:
-        votes = sum(pool.map(lambda _: one_call(), range(3)))
-    return votes >= 2
+        votes = [v for v in pool.map(lambda _: one_call(), range(3)) if v is not None]
+    if len(votes) < 2:
+        # too few calls landed to decide; surface it as an API problem rather
+        # than inventing a verdict from one vote
+        raise requests.RequestException("judge could not reach the model")
+    return sum(votes) > len(votes) / 2
 
 
 def generate(question, article_block, reg_names, api_key, model):

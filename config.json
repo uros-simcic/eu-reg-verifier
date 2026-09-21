@@ -12,6 +12,6 @@
   },
   "models": {
     "embedding": "mistral-embed",
-    "generation": "mistral-small-2506"
+    "generation": "ministral-8b-latest"
   }
 }

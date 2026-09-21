@@ -1,4 +1,4 @@
-# Grounded EU-Regulation Q&A
+# Grounded EU-regulation verifier
 
 Ask a question about the GDPR and get a straight answer tied to the exact
 article it comes from, or a clear "the text doesn't cover that." Every answer

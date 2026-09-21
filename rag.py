@@ -1,4 +1,4 @@
-"""The grounded Q&A loop: retrieve -> judge -> abstain -> cite.
+"""The grounded verifier loop: retrieve -> judge -> abstain -> cite.
 
 One self-contained question in; one grounded, cited answer OR an explicit
 abstention out. Hand-built so the whole decision stays auditable:

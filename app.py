@@ -1,4 +1,4 @@
-"""Gradio chat UI over the grounded Q&A loop.
+"""Gradio chat UI over the grounded verifier loop.
 
 Chat-style thread, single-turn under the hood: the visible history is display
 only; every question is answered independently and nothing from earlier turns
@@ -153,9 +153,9 @@ SCROLL_TO_QUESTION = """
 }
 """
 
-with gr.Blocks(title="Grounded EU-regulation Q&A", theme=THEME, css=CSS) as demo:
+with gr.Blocks(title="Grounded EU-regulation verifier", theme=THEME, css=CSS) as demo:
     gr.Markdown(
-        "# Grounded EU-regulation Q&A\n"
+        "# Grounded EU-regulation verifier\n"
         f"Answers come only from the loaded regulation text — currently **{LOADED}** — "
         "with a citation to the exact article, or the tool explicitly abstains. "
         "It never answers from model memory.\n\n"

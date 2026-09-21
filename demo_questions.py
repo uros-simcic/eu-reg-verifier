@@ -1,4 +1,4 @@
-"""A small demo/eval set for the grounded Q&A loop, in three buckets:
+"""A small demo/eval set for the grounded verifier loop, in three buckets:
 
   (a) clearly answerable  - expect a cited answer
   (b) outside the loaded regulation - the abstain gate must fire
